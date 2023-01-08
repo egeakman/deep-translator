@@ -40,11 +40,9 @@ class LibreTranslator(BaseTranslator):
         @param custom_url: you can use a custom endpoint
         """
         self.api_key = api_key
-        url = (
-            BASE_URLS.get("LIBRE") if not use_free_api else BASE_URLS.get("LIBRE_FREE")
-        )
+        url = BASE_URLS.get("LIBRE_FREE") if use_free_api else BASE_URLS.get("LIBRE")
         super().__init__(
-            base_url=url if not custom_url else custom_url,
+            base_url=custom_url or url,
             source=source,
             target=target,
             languages=LIBRE_LANGUAGES_TO_CODES,
@@ -56,39 +54,39 @@ class LibreTranslator(BaseTranslator):
         @param text: desired text to translate
         @return: str: translated text
         """
-        if is_input_valid(text):
-            if self._same_source_target() or is_empty(text):
-                return text
+        if not is_input_valid(text):
+            return
+        if self._same_source_target() or is_empty(text):
+            return text
 
-            translate_endpoint = "translate"
-            params = {
-                "q": text,
-                "source": self._source,
-                "target": self._target,
-                "format": "text",
-            }
-            # Add API Key if required
-            if self.api_key:
-                params["api_key"] = self.api_key
-            # Do the request and check the connection.
-            try:
-                response = requests.post(
-                    self._base_url + translate_endpoint, params=params
-                )
-            except ConnectionError:
-                raise ServerException(503)
-            # If the answer is not success, raise server exception.
+        translate_endpoint = "translate"
+        params = {
+            "q": text,
+            "source": self._source,
+            "target": self._target,
+            "format": "text",
+        }
+        # Add API Key if required
+        if self.api_key:
+            params["api_key"] = self.api_key
+        # Do the request and check the connection.
+        try:
+            response = requests.post(
+                self._base_url + translate_endpoint, params=params
+            )
+        except ConnectionError:
+            raise ServerException(503)
+        # If the answer is not success, raise server exception.
 
-            if response.status_code == 403:
-                raise AuthorizationException(self.api_key)
-            elif response.status_code != 200:
-                raise ServerException(response.status_code)
-            # Get the response and check is not empty.
-            res = response.json()
-            if not res:
-                raise TranslationNotFound(text)
+        if response.status_code == 403:
+            raise AuthorizationException(self.api_key)
+        elif response.status_code != 200:
+            raise ServerException(response.status_code)
+        if res := response.json():
             # Process and return the response.
             return res["translatedText"]
+        else:
+            raise TranslationNotFound(text)
 
     def translate_file(self, path: str, **kwargs) -> str:
         """

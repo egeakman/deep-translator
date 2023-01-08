@@ -12,15 +12,17 @@ class CLI(object):
     def __init__(self, custom_args: Optional[list] = None):
         self.custom_args = custom_args
         self.args = self.parse_args()
-        translator_class = self.translators_dict.get(self.args.translator, None)
-        if not translator_class:
+        if translator_class := self.translators_dict.get(
+            self.args.translator, None
+        ):
+            self.translator = translator_class(
+                source=self.args.source, target=self.args.target
+            )
+        else:
             raise Exception(
                 f"Translator {self.args.translator} is not supported."
                 f"Supported translators: {list(self.translators_dict.keys())}"
             )
-        self.translator = translator_class(
-            source=self.args.source, target=self.args.target
-        )
 
     def translate(self) -> None:
         """
@@ -81,12 +83,11 @@ class CLI(object):
             help="all the languages available with the translator"
             "Run the command deep_translator -trans <translator service> -lang",
         )
-        parsed_args = (
+        return (
             parser.parse_args(self.custom_args)
             if self.custom_args
             else parser.parse_args()
         )
-        return parsed_args
 
     def run(self) -> None:
         if self.args.languages:

@@ -54,42 +54,41 @@ class PonsTranslator(BaseTranslator):
         @type return_all: bool
         @return: str: translated word
         """
-        if is_input_valid(word, max_chars=50):
-            if self._same_source_target() or is_empty(word):
-                return word
-            url = f"{self._base_url}{self._source}-{self._target}/{word}"
-            url = requote_uri(url)
-            response = requests.get(url, proxies=self.proxies)
+        if not is_input_valid(word, max_chars=50):
+            return
+        if self._same_source_target() or is_empty(word):
+            return word
+        url = f"{self._base_url}{self._source}-{self._target}/{word}"
+        url = requote_uri(url)
+        response = requests.get(url, proxies=self.proxies)
 
-            if response.status_code == 429:
-                raise TooManyRequests()
+        if response.status_code == 429:
+            raise TooManyRequests()
 
-            if response.status_code != 200:
-                raise RequestError()
+        if response.status_code != 200:
+            raise RequestError()
 
-            soup = BeautifulSoup(response.text, "html.parser")
-            elements = soup.findAll(self._element_tag, self._element_query)
-            response.close()
+        soup = BeautifulSoup(response.text, "html.parser")
+        elements = soup.findAll(self._element_tag, self._element_query)
+        response.close()
 
-            if not elements:
-                raise ElementNotFoundInGetRequest(word)
+        if not elements:
+            raise ElementNotFoundInGetRequest(word)
 
-            filtered_elements = []
-            for el in elements:
-                temp = ""
-                for e in el.findAll("a"):
-                    temp += e.get_text() + " "
-                filtered_elements.append(temp)
+        filtered_elements = []
+        for el in elements:
+            temp = "".join(f"{e.get_text()} " for e in el.findAll("a"))
+            filtered_elements.append(temp)
 
-            if not filtered_elements:
-                raise ElementNotFoundInGetRequest(word)
+        if not filtered_elements:
+            raise ElementNotFoundInGetRequest(word)
 
-            word_list = [word for word in filtered_elements if word and len(word) > 1]
-
-            if not word_list:
-                raise TranslationNotFound(word)
-
+        if word_list := [
+            word for word in filtered_elements if word and len(word) > 1
+        ]:
             return word_list if return_all else word_list[0]
+        else:
+            raise TranslationNotFound(word)
 
     def translate_words(self, words: List[str], **kwargs) -> List[str]:
         """
@@ -101,7 +100,4 @@ class PonsTranslator(BaseTranslator):
         if not words:
             raise NotValidPayload(words)
 
-        translated_words = []
-        for word in words:
-            translated_words.append(self.translate(word=word, **kwargs))
-        return translated_words
+        return [self.translate(word=word, **kwargs) for word in words]

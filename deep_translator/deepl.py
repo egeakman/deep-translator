@@ -53,36 +53,36 @@ class DeeplTranslator(BaseTranslator):
         @param text: text to translate
         @return: translated text
         """
-        if is_input_valid(text):
-            if self._same_source_target() or is_empty(text):
-                return text
+        if not is_input_valid(text):
+            return
+        if self._same_source_target() or is_empty(text):
+            return text
 
-            # Create the request parameters.
-            translate_endpoint = "translate"
-            params = {
-                "auth_key": self.api_key,
-                "source_lang": self._source,
-                "target_lang": self._target,
-                "text": text,
-            }
-            # Do the request and check the connection.
-            try:
-                response = requests.get(
-                    self._base_url + translate_endpoint, params=params
-                )
-            except ConnectionError:
-                raise ServerException(503)
-            # If the answer is not success, raise server exception.
-            if response.status_code == 403:
-                raise AuthorizationException(self.api_key)
-            elif response.status_code != 200:
-                raise ServerException(response.status_code)
-            # Get the response and check is not empty.
-            res = response.json()
-            if not res:
-                raise TranslationNotFound(text)
+        # Create the request parameters.
+        translate_endpoint = "translate"
+        params = {
+            "auth_key": self.api_key,
+            "source_lang": self._source,
+            "target_lang": self._target,
+            "text": text,
+        }
+        # Do the request and check the connection.
+        try:
+            response = requests.get(
+                self._base_url + translate_endpoint, params=params
+            )
+        except ConnectionError:
+            raise ServerException(503)
+        # If the answer is not success, raise server exception.
+        if response.status_code == 403:
+            raise AuthorizationException(self.api_key)
+        elif response.status_code != 200:
+            raise ServerException(response.status_code)
+        if res := response.json():
             # Process and return the response.
             return res["translations"][0]["text"]
+        else:
+            raise TranslationNotFound(text)
 
     def translate_file(self, path: str, **kwargs) -> str:
         return self._translate_file(path, **kwargs)

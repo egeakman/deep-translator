@@ -13,7 +13,7 @@ class BaseError(Exception):
         super().__init__()
 
     def __str__(self):
-        return "{} --> {}".format(self.val, self.message)
+        return f"{self.val} --> {self.message}"
 
 
 class LanguageNotSupportedException(BaseError):
@@ -109,7 +109,7 @@ class MicrosoftAPIerror(Exception):
         self.message = "Microsoft API returned the following error"
 
     def __str__(self):
-        return "{}: {}".format(self.message, self.api_message)
+        return f"{self.message}: {self.api_message}"
 
 
 class TooManyRequests(Exception):
@@ -153,5 +153,5 @@ class ServerException(Exception):
 
 class AuthorizationException(Exception):
     def __init__(self, api_key, *args):
-        msg = "Unauthorized access with the api key " + api_key
+        msg = f"Unauthorized access with the api key {api_key}"
         super().__init__(msg, *args)

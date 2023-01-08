@@ -32,7 +32,7 @@ class MyMemoryTranslator(BaseTranslator):
         @param target: target language to translate to
         """
         self.proxies = proxies
-        self.email = kwargs.get("email", None)
+        self.email = kwargs.get("email")
         super().__init__(
             base_url=BASE_URLS.get("MYMEMORY"),
             source=source,
@@ -50,46 +50,40 @@ class MyMemoryTranslator(BaseTranslator):
         @param return_all: set to True to return all synonym/similars of the translated text
         @return: str or list
         """
-        if is_input_valid(text, max_chars=500):
-            text = text.strip()
-            if self._same_source_target() or is_empty(text):
-                return text
+        if not is_input_valid(text, max_chars=500):
+            return
+        text = text.strip()
+        if self._same_source_target() or is_empty(text):
+            return text
 
-            self._url_params["langpair"] = f"{self._source}|{self._target}"
-            if self.payload_key:
-                self._url_params[self.payload_key] = text
-            if self.email:
-                self._url_params["de"] = self.email
+        self._url_params["langpair"] = f"{self._source}|{self._target}"
+        if self.payload_key:
+            self._url_params[self.payload_key] = text
+        if self.email:
+            self._url_params["de"] = self.email
 
-            response = requests.get(
-                self._base_url, params=self._url_params, proxies=self.proxies
-            )
+        response = requests.get(
+            self._base_url, params=self._url_params, proxies=self.proxies
+        )
 
-            if response.status_code == 429:
-                raise TooManyRequests()
-            if response.status_code != 200:
-                raise RequestError()
+        if response.status_code == 429:
+            raise TooManyRequests()
+        if response.status_code != 200:
+            raise RequestError()
 
-            data = response.json()
-            if not data:
-                TranslationNotFound(text)
+        data = response.json()
+        if not data:
+            TranslationNotFound(text)
 
-            response.close()
-            translation = data.get("responseData").get("translatedText")
-            all_matches = data.get("matches", [])
+        response.close()
+        translation = data.get("responseData").get("translatedText")
+        all_matches = data.get("matches", [])
 
-            if translation:
-                if not return_all:
-                    return translation
-                else:
-                    # append translation at the start of the matches list
-                    return [translation] + list(all_matches)
-
-
-            elif not translation:
-                matches = (match["translation"] for match in all_matches)
-                next_match = next(matches)
-                return next_match if not return_all else list(all_matches)
+        if translation:
+            return [translation] + list(all_matches) if return_all else translation
+        matches = (match["translation"] for match in all_matches)
+        next_match = next(matches)
+        return list(all_matches) if return_all else next_match
 
     def translate_file(self, path: str, **kwargs) -> str:
         """

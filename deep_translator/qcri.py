@@ -60,8 +60,7 @@ class QcriTranslator(BaseTranslator):
         return self.get_supported_languages()
 
     def get_domains(self):
-        domains = self._get("get_domains")
-        return domains
+        return self._get("get_domains")
 
     @property
     def domains(self):
@@ -84,10 +83,10 @@ class QcriTranslator(BaseTranslator):
                 ServerException(response.status_code)
             else:
                 res = response.json()
-                translation = res.get("translatedText")
-                if not translation:
+                if translation := res.get("translatedText"):
+                    return translation
+                else:
                     raise TranslationNotFound(text)
-                return translation
 
     def translate_file(self, path: str, **kwargs) -> str:
         return self._translate_file(path, **kwargs)

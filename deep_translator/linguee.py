@@ -101,7 +101,4 @@ class LingueeTranslator(BaseTranslator):
         if not words:
             raise NotValidPayload(words)
 
-        translated_words = []
-        for word in words:
-            translated_words.append(self.translate(word=word, **kwargs))
-        return translated_words
+        return [self.translate(word=word, **kwargs) for word in words]

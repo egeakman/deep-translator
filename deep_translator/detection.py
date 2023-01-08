@@ -34,18 +34,15 @@ def get_request_body(text: Union[str, List[str]], api_key: str, *args, **kwargs)
     if not text:
         raise Exception("Please provide an input text")
 
-    else:
-        try:
-            headers = config["headers"]
-            headers["Authorization"] = headers["Authorization"].format(api_key)
-            response = requests.post(config["url"], json={"q": text}, headers=headers)
+    try:
+        headers = config["headers"]
+        headers["Authorization"] = headers["Authorization"].format(api_key)
+        response = requests.post(config["url"], json={"q": text}, headers=headers)
 
-            body = response.json().get("data")
-            return body
-
-        except HTTPError as e:
-            print("Error occured while requesting from server: ", e.args)
-            raise e
+        return response.json().get("data")
+    except HTTPError as e:
+        print("Error occured while requesting from server: ", e.args)
+        raise e
 
 
 def single_detection(
@@ -65,8 +62,7 @@ def single_detection(
     if detailed:
         return detections[0]
 
-    lang = detections[0].get("language", None)
-    if lang:
+    if lang := detections[0].get("language", None):
         return lang
 
 
@@ -83,7 +79,4 @@ def batch_detection(
     body = get_request_body(text_list, api_key)
     detections = body.get("detections")
     res = [obj[0] for obj in detections]
-    if detailed:
-        return res
-    else:
-        return [obj["language"] for obj in res]
+    return res if detailed else [obj["language"] for obj in res]

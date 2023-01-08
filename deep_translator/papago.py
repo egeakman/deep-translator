@@ -50,28 +50,28 @@ class PapagoTranslator(BaseTranslator):
         @param text: desired text to translate
         @return: str: translated text
         """
-        if is_input_valid(text):
-            payload = {"source": self._source, "target": self._target, "text": text}
-            headers = {
-                "X-Naver-Client-Id": self.client_id,
-                "X-Naver-Client-Secret": self.secret_key,
-                "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-            }
-            response = requests.post(self._base_url, headers=headers, data=payload)
-            if response.status_code != 200:
-                raise Exception(
-                    f"Translation error! -> status code: {response.status_code}"
-                )
-            res_body = json.loads(response.text)
-            if "message" not in res_body:
-                raise TranslationNotFound(text)
+        if not is_input_valid(text):
+            return
+        payload = {"source": self._source, "target": self._target, "text": text}
+        headers = {
+            "X-Naver-Client-Id": self.client_id,
+            "X-Naver-Client-Secret": self.secret_key,
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+        }
+        response = requests.post(self._base_url, headers=headers, data=payload)
+        if response.status_code != 200:
+            raise Exception(
+                f"Translation error! -> status code: {response.status_code}"
+            )
+        res_body = json.loads(response.text)
+        if "message" not in res_body:
+            raise TranslationNotFound(text)
 
-            msg = res_body.get("message")
-            result = msg.get("result", None)
-            if not result:
-                raise TranslationNotFound(text)
-            translated_text = result.get("translatedText")
-            return translated_text
+        msg = res_body.get("message")
+        if result := msg.get("result", None):
+            return result.get("translatedText")
+        else:
+            raise TranslationNotFound(text)
 
     def translate_file(self, path: str, **kwargs) -> str:
         """

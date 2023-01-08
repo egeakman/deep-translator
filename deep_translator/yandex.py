@@ -45,7 +45,7 @@ class YandexTranslator(BaseTranslator):
         )
 
     def _get_supported_languages(self):
-        return set(x.split("-")[0] for x in self.dirs)
+        return {x.split("-")[0] for x in self.dirs}
 
     @property
     def languages(self):
@@ -95,35 +95,36 @@ class YandexTranslator(BaseTranslator):
         return language
 
     def translate(self, text: str, proxies: Optional[dict] = None, **kwargs) -> str:
-        if is_input_valid(text):
-            params = {
-                "text": text,
-                "format": "plain",
-                "lang": self._target
-                if self._source == "auto"
-                else "{}-{}".format(self._source, self._target),
-                "key": self.api_key,
-            }
-            try:
-                url = self._base_url.format(
-                    version=self.api_version, endpoint="translate"
-                )
-                response = requests.post(url, data=params, proxies=proxies)
-            except ConnectionError:
-                raise ServerException(503)
-            else:
-                response = response.json()
+        if not is_input_valid(text):
+            return
+        params = {
+            "text": text,
+            "format": "plain",
+            "lang": self._target
+            if self._source == "auto"
+            else f"{self._source}-{self._target}",
+            "key": self.api_key,
+        }
+        try:
+            url = self._base_url.format(
+                version=self.api_version, endpoint="translate"
+            )
+            response = requests.post(url, data=params, proxies=proxies)
+        except ConnectionError:
+            raise ServerException(503)
+        else:
+            response = response.json()
 
-            if response["code"] == 429:
-                raise TooManyRequests()
+        if response["code"] == 429:
+            raise TooManyRequests()
 
-            if response["code"] != 200:
-                raise ServerException(response["code"])
+        if response["code"] != 200:
+            raise ServerException(response["code"])
 
-            if not response["text"]:
-                raise TranslationNotFound()
+        if not response["text"]:
+            raise TranslationNotFound()
 
-            return response["text"]
+        return response["text"]
 
     def translate_file(self, path: str, **kwargs) -> str:
         """
